@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,user-scalable=no">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vant@2.12/lib/index.css" />
+</head>
+
+<body>
+    <div id="app">
+        <van-cell is-link @click="showPopup">使用注意</van-cell>
+        <van-popup v-model="isshow">输入框输入城市或区县如“北京” “beijing” “东城区”。</van-popup>
+        <van-cell-group>
+            <van-field v-model="value" label="市（区县）" placeholder="请输入城市或区县" />
+        </van-cell-group>
+
+        <van-button plain type="primary" @click=searchId size="large">点击查询</van-button>
+
+        <div class="box" v-show="boxshow">
+            <van-cell is-link title="市/区" @click="showDown" />
+            <van-action-sheet v-model="show" :actions="actions" @select="onSelect" />
+
+        </div>
+
+
+
+
+
+
+        <van-cell-group>
+            <van-cell title="数据更新时间：" :value="obsTime.slice(0,10)" />
+
+        </van-cell-group>
+
+        <van-cell-group>
+            <van-cell title="温度：" :value="temp" />
+        </van-cell-group>
+
+        <van-cell-group>
+            <van-cell title="体感温度：" :value="feelsLike" />
+        </van-cell-group>
+
+        <van-cell-group>
+            <van-cell title="天气状况：" :value="text" />
+        </van-cell-group>
+
+        <van-cell-group>
+            <van-cell title="风向：" :value="windDir" />
+        </van-cell-group>
+
+        <van-cell-group>
+            <van-cell title="风力等级：" :value="windScale" />
+        </van-cell-group>
+
+
+        <van-divider :style="{ color: '#1989fa', borderColor: '#1989fa',  }">
+            粤ICP备2021061572号-1 Copyright Tencent Cloud.
+        </van-divider>
+
+
+
+    </div>
+
+    <div id="container" style="width: 100%;height: 300px;"></div>
+
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vant@2.12/lib/vant.min.js"></script>
+    <script src="https://webapi.amap.com/maps?v=1.4.15&key=811c2119c23b137550573b5c8f7c533b"></script>
+    <script type="text/javascript">
+        var map = new AMap.Map('container', {
+            center: [117.000923, 36.675807],
+            zoom: 11
+        });
+    </script>
+    <script>
+        const _axios = axios.create({
+            baseURL: "https://devapi.qweather.com/",
+            timeout: 5000
+        })
+        const __axios = axios.create({
+            baseURL: "https://geoapi.qweather.com/",
+            timeout: 5000
+        })
+        test = function (location) {
+            return _axios({
+                url: "v7/indices/1d",
+                method: "GET",
+                params: {
+                    key: "6f17693003f54d7782fcb8b5591f17ed",
+                    type: "1,2,3",
+                    location: location
+
+                }
+            })
+        }
+        // https://geoapi.qweather.com/v2/city/lookup?location=foshan&key=6f17693003f54d7782fcb8b5591f17ed
+        // https://devapi.qweather.com/v2/city/lookup?location=foshan&key=6f17693003f54d7782fcb8b5591f17ed
+        getLocationID = function (location) {
+            return __axios({
+                url: "v2/city/lookup",
+                method: "GET",
+                params: {
+                    location: location,
+                    key: "6f17693003f54d7782fcb8b5591f17ed"
+
+
+
+                }
+            })
+        }
+
+        getRealtimeWeather = function (location) {
+            return _axios({
+                url: "v7/weather/now",
+                method: "GET",
+                params: {
+                    key: "6f17693003f54d7782fcb8b5591f17ed",
+                    location: location
+
+
+
+
+                }
+            })
+        }
+        const app = new Vue({
+            el: "#app",
+            data: {
+                cityId: "",
+                cityNames: [],
+                defautName: "",
+                obsTime: "",
+                temp: '',
+                feelsLike: '',
+                text: '',
+                windDir: '',
+                windScale: '',
+
+                show: false,
+                actions: [],
+
+                value: "",
+
+                boxshow: false,
+
+                isshow: false,
+
+
+            },
+            created: function () {
+                // test("101010100").then(res => {
+                //     console.log(res)
+                // })
+            },
+            methods: {
+                searchId: function () {
+
+                    this.actions = []
+
+                    getLocationID(this.value).then(res => {
+
+                        if (res.data.location) {
+                            this.boxshow = true
+                        }
+
+
+                        // console.log(res.data.location)
+                        this.cityNames = res.data.location
+
+
+                        this.cityNames.forEach(item => {
+                            this.actions.push({
+                                name: item.name,
+                                location: item.id
+                            })
+                        });
+
+
+
+                    })
+                },
+                realTime: function () {
+
+
+                    getRealtimeWeather(this.defautName.id).then(res => {
+                        // console.log(res)
+
+                        this.obsTime = res.data.now.obsTime
+                        this.temp = res.data.now.temp
+                        this.feelsLike = res.data.now.feelsLike
+                        this.text = res.data.now.text
+                        this.windDir = res.data.now.windDir
+                        this.windScale = res.data.now.windScale
+
+                    })
+                },
+
+
+                onSelect(item) {
+                    // 默认情况下点击选项时不会自动收起
+                    // 可以通过 close-on-click-action 属性开启自动收起
+                    this.show = false;
+                    console.log("----------------")
+                    console.log(item)
+                    getRealtimeWeather(item.location).then(res => {
+                        console.log(res)
+
+                        this.obsTime = res.data.now.obsTime
+                        this.temp = res.data.now.temp
+                        this.feelsLike = res.data.now.feelsLike
+                        this.text = res.data.now.text
+                        this.windDir = res.data.now.windDir
+                        this.windScale = res.data.now.windScale
+
+                    })
+
+                },
+
+                onCancel() {
+                    this.show = false
+                },
+                showDown() {
+
+                    this.show = true
+
+
+                },
+                showPopup() {
+                    this.isshow = true;
+                },
+            },
+        })
+    </script>
+</body>
+
+</html>
